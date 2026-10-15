@@ -5,6 +5,25 @@ Enterprise Agentic Infrastructure Governance microservice implementing the
 **Cryptographic Action-Binding (`H_A == H_B`)** to govern automated Terraform
 deployments across **Azure Verified Modules (AVM)** and **GCP Cloud Modules**.
 
+## 🧭 Framework Highlights
+
+This service adapts American Express's [Intent Intelligence framework](https://americanexpress.io/intent-intelligence-building-trust-in-agentic-commerce/) —
+built for agentic *commerce* — to agentic *cloud infrastructure*. The core
+concepts map directly:
+
+| Intent Intelligence (Amex, payments) | GovOps FinOps Action Gate (this repo, infra) |
+|---|---|
+| User confirms intent: merchant, max spend, time limits | Agent declares intent: provider, target action/resource, `max_budget_usd`, `allowed_region`, expiry |
+| Issuer authenticates the user and issues an **Intent ID** + **Proof of Intent Token** (JWT) | `POST /api/v1/intent/create` issues an `intent_id` + signed `proof_of_intent_token` (JWT) |
+| Proof of Intent Token scopes a payment credential and expires on a set date | Proof-of-intent token scopes a Terraform action and expires via the JWT `exp` claim |
+| Durable guardrails constrain agent action at execution, to limit disputes/fraud | `POST /api/v1/action/execute` re-verifies the token, enforces `H_A == H_B` action-binding, then applies budget/region/destructive-action policy guardrails before touching infrastructure |
+
+The result: an agent can be delegated the authority to request a cloud
+deployment, but every execution is re-checked against the original signed
+intent before `terraform plan` ever runs — the same "capture once, enforce
+at execution" pattern Amex uses to keep agentic purchases inside
+user-defined boundaries.
+
 ## 🏛️ Architectural Flow
 
 1. **Agent Intent Capture** — an agent captures its cloud deployment
@@ -34,9 +53,8 @@ intent-swap attacks that a signature check alone would miss.
 
 ## 📦 Module Catalog (real Azure AVM + GCP CFT modules)
 
-This is no longer a single hardcoded module per cloud. `app/module_catalog.py`
-maps a `module_key` to a real, independently-plannable Terraform root under
-`terraform/<provider>/<dir_name>/`:
+`app/module_catalog.py` maps a `module_key` to a real, independently-plannable
+Terraform root under `terraform/<provider>/<dir_name>/`:
 
 | Provider | `module_key` | Real module source |
 |---|---|---|
