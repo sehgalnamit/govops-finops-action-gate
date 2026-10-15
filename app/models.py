@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,13 @@ class IntentCaptureRequest(BaseModel):
     max_budget_usd: float = Field(gt=0)
     allowed_region: str = "us-east-1"
     expires_at: datetime
+    module_key: Optional[str] = Field(
+        default=None,
+        description=(
+            "Catalog key of the Azure AVM / GCP module this intent authorizes "
+            "(see GET /api/v1/catalog). Defaults to the provider's default module."
+        ),
+    )
 
 
 class ActionExecutionPayload(BaseModel):
@@ -38,3 +45,7 @@ class ActionExecutionPayload(BaseModel):
     tf_variables: Dict[str, Any] = Field(default_factory=dict)
     requested_budget: float
     region: str
+    module_key: Optional[str] = Field(
+        default=None,
+        description="Catalog key of the module to plan against. Defaults to the provider's default module.",
+    )

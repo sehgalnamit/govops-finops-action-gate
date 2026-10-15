@@ -6,12 +6,9 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-TERRAFORM_ROOT = Path(__file__).resolve().parent.parent / "terraform"
+from app.module_catalog import get_catalog_entry
 
-MODULE_DIRS = {
-    "azure_avm": TERRAFORM_ROOT / "azure_avm",
-    "gcp_modules": TERRAFORM_ROOT / "gcp_modules",
-}
+TERRAFORM_ROOT = Path(__file__).resolve().parent.parent / "terraform"
 
 
 class TerraformExecutor:
@@ -28,13 +25,13 @@ class TerraformExecutor:
         return shutil.which("terraform") is not None
 
     @classmethod
-    def run_terraform_plan(cls, provider: str, tf_vars: Dict[str, Any]) -> Dict[str, Any]:
-        module_dir = MODULE_DIRS.get(provider)
-        if module_dir is None:
-            return {
-                "status": "ERROR",
-                "error": f"Unknown provider '{provider}'. Expected one of {list(MODULE_DIRS)}.",
-            }
+    def run_terraform_plan(cls, provider: str, module_key: str, tf_vars: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            catalog_entry = get_catalog_entry(provider, module_key)
+        except KeyError as exc:
+            return {"status": "ERROR", "error": str(exc)}
+
+        module_dir = TERRAFORM_ROOT / provider / catalog_entry.dir_name
 
         if not cls._terraform_binary_available():
             return cls._simulated_plan(provider, module_dir, tf_vars)

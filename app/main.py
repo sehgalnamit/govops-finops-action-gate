@@ -15,6 +15,7 @@ from fastapi import FastAPI, HTTPException
 
 from app.crypto_gate import CryptographicActionBinder
 from app.models import ActionExecutionPayload, IntentCaptureRequest
+from app.module_catalog import MODULE_CATALOG, get_catalog_entry, resolve_module_key
 from app.policy_engine import GovOpsPolicyEngine
 from app.terraform_runner import TerraformExecutor
 
@@ -38,10 +39,32 @@ app = FastAPI(
 _INTENT_STORE: Dict[str, Dict[str, Any]] = {}
 
 
+@app.get("/api/v1/catalog")
+def list_module_catalog() -> Dict[str, Any]:
+    """List the Azure AVM / GCP CFT modules available to gate against."""
+    return {
+        provider: {
+            module_key: {
+                "source": entry.source,
+                "version": entry.version,
+                "description": entry.description,
+            }
+            for module_key, entry in modules.items()
+        }
+        for provider, modules in MODULE_CATALOG.items()
+    }
+
+
 @app.post("/api/v1/intent/create")
 def create_intent(request: IntentCaptureRequest) -> Dict[str, Any]:
     """Capture an agent's declared intent and issue a signed proof-of-intent token."""
     intent_id = f"intent_{uuid.uuid4().hex[:16]}"
+
+    module_key = resolve_module_key(request.provider.value, request.module_key)
+    try:
+        get_catalog_entry(request.provider.value, module_key)
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     intent_constraints = {
         "intent_id": intent_id,
@@ -51,6 +74,7 @@ def create_intent(request: IntentCaptureRequest) -> Dict[str, Any]:
         "target_resource": request.target_resource,
         "max_budget_usd": request.max_budget_usd,
         "allowed_region": request.allowed_region,
+        "module_key": module_key,
     }
 
     token_exp = request.expires_at
@@ -89,12 +113,19 @@ def execute_action(payload: ActionExecutionPayload) -> Dict[str, Any]:
     if intent_constraints is None:
         raise HTTPException(status_code=404, detail=f"Unknown intent_id '{payload.intent_id}'.")
 
+    requested_module_key = resolve_module_key(payload.provider.value, payload.module_key)
+    try:
+        get_catalog_entry(payload.provider.value, requested_module_key)
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     # HA: footprint authorized at intent-capture time (from the signed token).
     h_a_payload = {
         "intent_id": token_payload["intent_id"],
         "provider": token_payload["provider"],
         "target_action": token_payload["target_action"],
         "target_resource": token_payload["target_resource"],
+        "module_key": token_payload.get("module_key"),
     }
     # HB: footprint of what is actually being requested for execution.
     h_b_payload = {
@@ -102,6 +133,7 @@ def execute_action(payload: ActionExecutionPayload) -> Dict[str, Any]:
         "provider": payload.provider.value,
         "target_action": payload.action,
         "target_resource": payload.resource,
+        "module_key": requested_module_key,
     }
 
     if not CryptographicActionBinder.verify_action_binding(h_a_payload, h_b_payload):
@@ -122,7 +154,9 @@ def execute_action(payload: ActionExecutionPayload) -> Dict[str, Any]:
     if not approved:
         raise HTTPException(status_code=403, detail=reason)
 
-    terraform_result = TerraformExecutor.run_terraform_plan(payload.provider.value, payload.tf_variables)
+    terraform_result = TerraformExecutor.run_terraform_plan(
+        payload.provider.value, requested_module_key, payload.tf_variables
+    )
 
     return {
         "status": "EXECUTED",
@@ -133,6 +167,7 @@ def execute_action(payload: ActionExecutionPayload) -> Dict[str, Any]:
             "intent_id": payload.intent_id,
             "user_id": intent_constraints["user_id"],
             "provider": payload.provider.value,
+            "module_key": requested_module_key,
             "action": payload.action,
             "resource": payload.resource,
             "requested_budget": payload.requested_budget,

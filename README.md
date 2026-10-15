@@ -32,6 +32,34 @@ guarantees the *live execution request* hasn't drifted from what the agent
 was actually authorized to do — catching prompt-injection-style
 intent-swap attacks that a signature check alone would miss.
 
+## 📦 Module Catalog (real Azure AVM + GCP CFT modules)
+
+This is no longer a single hardcoded module per cloud. `app/module_catalog.py`
+maps a `module_key` to a real, independently-plannable Terraform root under
+`terraform/<provider>/<dir_name>/`:
+
+| Provider | `module_key` | Real module source |
+|---|---|---|
+| `azure_avm` | `resource_group` *(default)* | `Azure/avm-res-resources-resourcegroup/azurerm` |
+| `azure_avm` | `virtual_network` | `Azure/avm-res-network-virtualnetwork/azurerm` |
+| `azure_avm` | `storage_account` | `Azure/avm-res-storage-storageaccount/azurerm` |
+| `azure_avm` | `key_vault` | `Azure/avm-res-keyvault-vault/azurerm` |
+| `gcp_modules` | `cloud_storage` *(default)* | `terraform-google-modules/cloud-storage/google` |
+| `gcp_modules` | `vpc_network` | `terraform-google-modules/network/google` |
+| `gcp_modules` | `cloud_sql_postgresql` | `terraform-google-modules/sql-db/google//modules/postgresql` |
+
+`GET /api/v1/catalog` returns this list at runtime. `IntentCaptureRequest`
+and `ActionExecutionPayload` both accept an optional `module_key` - if
+omitted, the provider's default module is used (keeping the simplest
+single-resource demo flow unchanged). `module_key` is part of the
+`H_A`/`H_B` footprint, so an intent authorized for `resource_group` cannot
+be used to execute against `key_vault` - that mismatch is vetoed with
+`HTTP 403` exactly like an action/resource mismatch.
+
+Adding another catalog module (e.g. an AKS/GKE cluster) is a two-step,
+code-free-elsewhere change: add an entry to `MODULE_CATALOG` and a new
+`terraform/<provider>/<dir_name>/main.tf`.
+
 ## 🚀 Quick Start (free, no cloud account required)
 
 ```bash
@@ -113,7 +141,8 @@ uvicorn app.main:app --reload
 Once authenticated and `terraform` is on `PATH`, `TerraformExecutor.run_terraform_plan`
 automatically switches from the simulated path to running
 `terraform init -backend=false` + `terraform plan` for real against
-`terraform/azure_avm` or `terraform/gcp_modules` — no code changes needed.
+the resolved catalog module's directory (e.g. `terraform/azure_avm/virtual_network`)
+— no code changes needed.
 
 ## 🧪 Demo Scenarios
 
@@ -121,6 +150,10 @@ automatically switches from the simulated path to running
 - **Scenario B** — Authorized GCP Cloud Storage module plan execution.
 - **Scenario C** — Prompt-injection / destroy-attack veto (`H_A != H_B`
   triggers `HTTP 403`).
+- **Scenario D** — `module_key` drift veto: an intent authorized for
+  `resource_group` is replayed against `key_vault` and is vetoed
+  (`H_A != H_B`), even though the action/resource strings alone would
+  look identical.
 
 ## ⚠️ Demo vs. production
 
