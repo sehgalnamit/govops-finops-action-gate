@@ -2,6 +2,7 @@
 
 > This is the architecture write-up behind [govops-finops-action-gate](https://github.com/sehgalnamit/govops-finops-action-gate).
 > For install/run instructions, see the main [README](../README.md).
+> Published version: [Intent Intelligence: Adapting Amex's Agentic Commerce Framework for Enterprise FinOps and Multi-Cloud Governance](https://articles.namitsehgal.com/intent-intelligence-adapting-amex-s-agentic-commerce-framework-for-enterprise-finops-and-multi-cloud-governance).
 
 As AI agents transition from passive conversational advisors to autonomous
 enterprise actors, the software ecosystem faces a critical paradigm shift:

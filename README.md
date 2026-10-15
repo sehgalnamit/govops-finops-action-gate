@@ -9,7 +9,9 @@ Toolkit (CFT) modules**.
 📖 **For the full architecture write-up** — the problem statement, Amex's
 4-stage Intent Intelligence pattern, System 1/System 2 flowcharts, the
 complete execution-dataflow state diagram, and a comparative matrix against
-traditional agentic architectures — see [docs/ARTICLE.md](docs/ARTICLE.md).
+traditional agentic architectures — read the published article:
+[Intent Intelligence: Adapting Amex's Agentic Commerce Framework for Enterprise FinOps and Multi-Cloud Governance](https://articles.namitsehgal.com/intent-intelligence-adapting-amex-s-agentic-commerce-framework-for-enterprise-finops-and-multi-cloud-governance)
+(mirrored in-repo at [docs/ARTICLE.md](docs/ARTICLE.md)).
 
 ## 🏛️ Architectural Flow
 
@@ -175,4 +177,5 @@ the resolved catalog module's directory (e.g. `terraform/azure_avm/virtual_netwo
 
 - [Intent Intelligence: Building Trust in Agentic Commerce — American Express Technology](https://americanexpress.io/intent-intelligence-building-trust-in-agentic-commerce/)
 - [American Express Publishes Intent Intelligence Framework for Trusted Agentic Commerce](https://www.americanexpress.com/en-us/newsroom/articles/innovation/intent-intelligence-framework-agentic-commerce.html)
-- Full write-up with diagrams: [docs/ARTICLE.md](docs/ARTICLE.md)
+- Published article: [Intent Intelligence: Adapting Amex's Agentic Commerce Framework for Enterprise FinOps and Multi-Cloud Governance](https://articles.namitsehgal.com/intent-intelligence-adapting-amex-s-agentic-commerce-framework-for-enterprise-finops-and-multi-cloud-governance)
+- Full write-up with diagrams (in-repo mirror): [docs/ARTICLE.md](docs/ARTICLE.md)
