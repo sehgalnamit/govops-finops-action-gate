@@ -56,24 +56,64 @@ no Azure/GCP account**.
 
 `terraform plan` is read-only (it never provisions anything), so this can
 be done at `$0` as long as you stay within your cloud's always-free limits.
-Authenticate locally — **never paste credentials into chat/source**:
+Authenticate locally — **never paste credentials into chat/source control**.
+
+### 1. Install the CLIs
+
+```powershell
+# Windows (winget)
+winget install Hashicorp.Terraform
+winget install Microsoft.AzureCLI
+winget install Google.CloudSDK
+```
 
 ```bash
-# Terraform CLI
-# https://developer.hashicorp.com/terraform/install
+# macOS (Homebrew)
+brew install terraform azure-cli google-cloud-sdk
+```
 
-# Azure
+### 2. Authenticate interactively (recommended for local demos)
+
+```bash
+# Azure — opens a browser login
 az login
-# optional: az account set --subscription <SUBSCRIPTION_ID>
+az account set --subscription <SUBSCRIPTION_ID>   # optional, if you have more than one
 
-# GCP
+# GCP — opens a browser login
 gcloud auth application-default login
 gcloud config set project <PROJECT_ID>
 ```
 
-Once authenticated, `TerraformExecutor.run_terraform_plan` will run
+### 3. (Alternative) Authenticate via environment variables (CI-style, no browser)
+
+Set these in your own shell session — never commit them:
+
+```bash
+# Azure service principal
+export ARM_CLIENT_ID=<app-id>
+export ARM_CLIENT_SECRET=<app-secret>
+export ARM_SUBSCRIPTION_ID=<subscription-id>
+export ARM_TENANT_ID=<tenant-id>
+
+# GCP service account
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+export GOOGLE_PROJECT=<project-id>
+```
+
+### 4. Verify, then run the gate
+
+```bash
+terraform -version
+az account show        # confirms Azure auth
+gcloud config list     # confirms GCP auth
+
+uvicorn app.main:app --reload
+```
+
+Once authenticated and `terraform` is on `PATH`, `TerraformExecutor.run_terraform_plan`
+automatically switches from the simulated path to running
 `terraform init -backend=false` + `terraform plan` for real against
-`terraform/azure_avm` or `terraform/gcp_modules`.
+`terraform/azure_avm` or `terraform/gcp_modules` — no code changes needed.
 
 ## 🧪 Demo Scenarios
 
